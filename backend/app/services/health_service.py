@@ -56,19 +56,24 @@ def _get_resource_usage() -> Dict[str, Any]:
 
     try:
         import psutil
-        result["cpu_percent"] = psutil.cpu_percent(interval=1)
+        psutil.cpu_percent(interval=None)
+        import time
+        time.sleep(0.1)
+        result["cpu_percent"] = psutil.cpu_percent(interval=None)
         mem = psutil.virtual_memory()
         result["memory_percent"] = mem.percent
         result["memory_used_mb"] = round(mem.used / (1024 * 1024), 1)
         result["memory_total_mb"] = round(mem.total / (1024 * 1024), 1)
-        disk = psutil.disk_usage("/")
+        disk_path = "C:\\"
+        disk = psutil.disk_usage(disk_path)
         result["disk_percent"] = disk.percent
         result["disk_used_gb"] = round(disk.used / (1024 ** 3), 2)
         result["disk_total_gb"] = round(disk.total / (1024 ** 3), 2)
-    except ImportError:
+    except Exception as e:
+        logger.error(f"Failed to get resource usage: {e}")
         try:
             import shutil
-            total, used, free = shutil.disk_usage("/")
+            total, used, free = shutil.disk_usage("C:\\")
             result["disk_percent"] = round((used / total) * 100, 1)
             result["disk_used_gb"] = round(used / (1024 ** 3), 2)
             result["disk_total_gb"] = round(total / (1024 ** 3), 2)
