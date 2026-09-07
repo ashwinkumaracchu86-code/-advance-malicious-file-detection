@@ -1,9 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import {
-  FiClock, FiPlus, FiTrash2, FiPlay, FiPause, FiRefreshCw, FiFolder
+  FiClock, FiPlus, FiTrash2, FiPlay, FiPause, FiRefreshCw, FiFolder, FiChevronDown
 } from 'react-icons/fi';
 import { featuresAPI } from '../services/api';
+
+const PRESET_PATHS = [
+  { label: 'Downloads', path: 'C:\\Users\\%USERNAME%\\Downloads' },
+  { label: 'Desktop', path: 'C:\\Users\\%USERNAME%\\Desktop' },
+  { label: 'Documents', path: 'C:\\Users\\%USERNAME%\\Documents' },
+  { label: 'Temp', path: 'C:\\Windows\\Temp' },
+  { label: 'Program Files', path: 'C:\\Program Files' },
+];
 
 export default function ScheduledScansPage() {
   const [jobs, setJobs] = useState([]);
@@ -11,6 +19,8 @@ export default function ScheduledScansPage() {
   const [folderPath, setFolderPath] = useState('');
   const [interval, setInterval_] = useState(60);
   const [jobName, setJobName] = useState('');
+  const [showPresets, setShowPresets] = useState(false);
+  const folderInputRef = useRef(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -91,13 +101,40 @@ export default function ScheduledScansPage() {
           <FiPlus className="text-cyan-400" /> Add Scheduled Scan
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <input
-            type="text"
-            value={folderPath}
-            onChange={(e) => setFolderPath(e.target.value)}
-            placeholder="Folder path (e.g., C:\Downloads)"
-            className="px-4 py-2.5 bg-dark-950 border border-dark-700 rounded-lg text-dark-100 placeholder-dark-500 focus:outline-none focus:border-cyan-500/50 text-sm font-mono"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={folderPath}
+              onChange={(e) => setFolderPath(e.target.value)}
+              placeholder="Folder path (e.g., C:\Downloads)"
+              className="w-full px-4 py-2.5 bg-dark-950 border border-dark-700 rounded-lg text-dark-100 placeholder-dark-500 focus:outline-none focus:border-cyan-500/50 text-sm font-mono pr-10"
+            />
+            <button
+              onClick={() => setShowPresets(!showPresets)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded hover:bg-dark-800 transition-colors"
+              title="Quick paths"
+            >
+              <FiChevronDown className={`w-4 h-4 text-dark-400 transition-transform ${showPresets ? 'rotate-180' : ''}`} />
+            </button>
+            {showPresets && (
+              <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-dark-900 border border-dark-700 rounded-lg shadow-lg overflow-hidden">
+                {PRESET_PATHS.map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => {
+                      setFolderPath(preset.path);
+                      setShowPresets(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left text-sm text-dark-200 hover:bg-dark-800 transition-colors flex items-center gap-2"
+                  >
+                    <FiFolder className="w-4 h-4 text-cyan-400" />
+                    <span>{preset.label}</span>
+                    <span className="text-xs text-dark-500 ml-auto font-mono">{preset.path}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <input
             type="text"
             value={jobName}
