@@ -109,8 +109,8 @@ def delete_yara_rule(
 
 
 @router.post("/yara-rules/reload")
-def reload_yara_rules(current_user: User = Depends(require_admin)):
-    """Reload all YARA rules (admin only)."""
+def reload_yara_rules(current_user: User = Depends(get_current_user)):
+    """Reload all YARA rules."""
     return yara_rules_service.reload_rules()
 
 

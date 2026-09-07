@@ -68,13 +68,13 @@ def delete_rule(filename: str) -> Dict[str, Any]:
 def reload_rules() -> Dict[str, Any]:
     """Reload all YARA rules by reinitializing the scanner."""
     try:
-        from ..scanner.yara_scanner import scanner_instance
-        if scanner_instance:
-            scanner_instance.load_rules()
-            count = scanner_instance.get_loaded_rules_count()
-            return {"status": "reloaded", "rules_count": count}
-        return {"error": "Scanner not initialized"}
+        from ..scanner.yara_scanner import get_yara_scanner, scanner_instance
+        scanner = scanner_instance or get_yara_scanner()
+        scanner.load_rules()
+        count = scanner.get_loaded_rules_count()
+        return {"status": "reloaded", "rules_count": count}
     except Exception as e:
+        logger.error(f"YARA reload failed: {e}")
         return {"error": f"Reload failed: {str(e)}"}
 
 
