@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  FiFile, FiCheckCircle, FiAlertTriangle, FiShield, FiXOctagon, FiActivity, FiRefreshCw
+  FiFile, FiCheckCircle, FiAlertTriangle, FiShield, FiXOctagon, FiActivity, FiRefreshCw, FiPlay, FiSquare
 } from 'react-icons/fi';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { dashboardAPI } from '../services/api';
+import toast from 'react-hot-toast';
+import { dashboardAPI, antivirusAPI, realtimeAPI } from '../services/api';
 
 const COLORS = {
   safe: '#22c55e',
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const location = useLocation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [autoScanEnabled, setAutoScanEnabled] = useState(true);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -56,9 +58,39 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchAutoScanStatus = useCallback(async () => {
+    try {
+      const res = await antivirusAPI.getStatus();
+      setAutoScanEnabled(res.data.auto_scan_enabled);
+    } catch (err) {
+      console.error('Failed to fetch auto-scan status', err);
+    }
+  }, []);
+
+  const handleStopAutoScan = async () => {
+    try {
+      await realtimeAPI.stopAutoScan();
+      setAutoScanEnabled(false);
+      toast.success('Auto-scan stopped');
+    } catch (err) {
+      toast.error('Failed to stop auto-scan');
+    }
+  };
+
+  const handleStartAutoScan = async () => {
+    try {
+      await realtimeAPI.startAutoScan();
+      setAutoScanEnabled(true);
+      toast.success('Auto-scan started');
+    } catch (err) {
+      toast.error('Failed to start auto-scan');
+    }
+  };
+
   useEffect(() => {
     fetchStats();
-  }, [fetchStats, location.pathname]);
+    fetchAutoScanStatus();
+  }, [fetchStats, fetchAutoScanStatus, location.pathname]);
 
   if (loading) {
     return (
@@ -112,6 +144,21 @@ export default function DashboardPage() {
             <FiActivity className="text-cyan-400" />
             <span>{detectionRate}% detection rate</span>
           </div>
+          {autoScanEnabled ? (
+            <button
+              onClick={handleStopAutoScan}
+              className="px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiSquare className="w-4 h-4" /> Stop Auto-Scan
+            </button>
+          ) : (
+            <button
+              onClick={handleStartAutoScan}
+              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiPlay className="w-4 h-4" /> Start Auto-Scan
+            </button>
+          )}
           <button
             onClick={fetchStats}
             disabled={loading}

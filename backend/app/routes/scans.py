@@ -69,8 +69,8 @@ def list_scans(
     limit: int = Query(50, ge=1, le=200),
     search: Optional[str] = None,
     classification: Optional[str] = None,
-    sort_by: str = Query("scan_date", regex="^(scan_date|risk_score|classification)$"),
-    sort_order: str = Query("desc", regex="^(asc|desc)$"),
+    sort_by: str = Query("scan_date", pattern="^(scan_date|risk_score|classification)$"),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

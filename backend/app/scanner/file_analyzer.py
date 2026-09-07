@@ -8,6 +8,7 @@ from .mime_detector import get_file_info
 from .entropy_analyzer import calculate_shannon_entropy
 from .string_analyzer import extract_suspicious_strings
 from .yara_scanner import scan_file_with_yara
+from .clamav_scanner import scan_file_with_clamav
 from .risk_scorer import calculate_risk_score
 
 logger = logging.getLogger(__name__)
@@ -93,7 +94,26 @@ def analyze_file(file_path: str, vt_results: Optional[Dict] = None) -> Dict[str,
         result["yara_match_count"] = 0
         result["yara_rule_names"] = []
 
-    # 6. VirusTotal results (if provided)
+    # 6. ClamAV antivirus scanning
+    try:
+        clamav_data = scan_file_with_clamav(file_path)
+        result["clamav_scanned"] = clamav_data["scanned"]
+        result["clamav_is_infected"] = clamav_data["is_infected"]
+        result["clamav_virus_name"] = clamav_data["virus_name"]
+        result["clamav_scan_result"] = clamav_data["scan_result"]
+        result["clamav_engine_version"] = clamav_data.get("engine_version", "")
+        result["clamav_db_version"] = clamav_data.get("db_version", "")
+    except Exception as e:
+        logger.error(f"ClamAV scanning failed: {e}")
+        result["errors"].append(f"ClamAV scanning: {str(e)}")
+        result["clamav_scanned"] = False
+        result["clamav_is_infected"] = False
+        result["clamav_virus_name"] = None
+        result["clamav_scan_result"] = "error"
+        result["clamav_engine_version"] = ""
+        result["clamav_db_version"] = ""
+
+    # 7. VirusTotal results (if provided)
     vt_positives = 0
     vt_total = 0
     if vt_results:
@@ -102,7 +122,7 @@ def analyze_file(file_path: str, vt_results: Optional[Dict] = None) -> Dict[str,
     result["vt_positives"] = vt_positives
     result["vt_total"] = vt_total
 
-    # 7. Risk scoring
+    # 8. Risk scoring
     try:
         risk_data = calculate_risk_score(
             entropy=result["entropy"],
@@ -114,6 +134,8 @@ def analyze_file(file_path: str, vt_results: Optional[Dict] = None) -> Dict[str,
             file_size=result["file_size"],
             vt_positives=vt_positives,
             vt_total=vt_total,
+            clamav_is_infected=result["clamav_is_infected"],
+            clamav_scan_result=result["clamav_scan_result"],
         )
         result["risk_score"] = risk_data["risk_score"]
         result["classification"] = risk_data["classification"]

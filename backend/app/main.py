@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from .database import engine, Base, SessionLocal
 from .models.models import User
 from .security.auth import get_password_hash
-from .routes import auth, files, scans, dashboard, quarantine, logs, reports, antivirus
+from .routes import auth, files, scans, dashboard, quarantine, logs, reports, antivirus, realtime
 from .scanner.yara_scanner import get_yara_scanner
 
 logging.basicConfig(level=logging.INFO)
@@ -56,8 +56,18 @@ async def lifespan(app: FastAPI):
     scanner = get_yara_scanner()
     logger.info(f"YARA scanner initialized with {scanner.get_loaded_rules_count()} rules.")
 
+    from .routes.antivirus import _monitored_paths
+    from .services import folder_monitor
+    if _monitored_paths:
+        for path in _monitored_paths:
+            if os.path.isdir(path):
+                folder_monitor.start_monitoring(path)
+                logger.info(f"Auto-started monitoring: {path}")
+
     yield
 
+    from .services import folder_monitor
+    folder_monitor.stop_monitoring()
     logger.info("Application shutting down.")
 
 
@@ -84,6 +94,7 @@ app.include_router(quarantine.router)
 app.include_router(logs.router)
 app.include_router(reports.router)
 app.include_router(antivirus.router)
+app.include_router(realtime.router)
 
 
 @app.get("/")

@@ -21,6 +21,7 @@ class YaraScanner:
             rules_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "yara_rules")
         self.rules_dir = rules_dir
         self.compiled_rules = None
+        self._rules_count = 0
         self.load_rules()
 
     def load_rules(self) -> None:
@@ -47,6 +48,7 @@ class YaraScanner:
             self.compiled_rules = yara.compile(
                 filepaths={f"rule_{i}": f for i, f in enumerate(rule_files)}
             )
+            self._rules_count = len(rule_files)
             logger.info(f"Compiled {len(rule_files)} YARA rule files.")
         except yara.SyntaxError as e:
             logger.error(f"YARA syntax error: {e}")
@@ -158,7 +160,7 @@ class YaraScanner:
         """Get the number of compiled rules."""
         if self.compiled_rules is None:
             return 0
-        return len(self.compiled_rules)
+        return self._rules_count
 
 
 scanner_instance = None

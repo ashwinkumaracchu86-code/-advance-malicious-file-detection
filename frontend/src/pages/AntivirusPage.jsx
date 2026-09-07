@@ -4,9 +4,10 @@ import {
   FiShield, FiShieldOff, FiPlay, FiSquare, FiUpload, FiFile,
   FiCheckCircle, FiAlertTriangle, FiXOctagon, FiRefreshCw, FiInfo,
   FiSettings, FiFolder, FiLock, FiUnlock, FiBell, FiBellOff,
-  FiTrash2, FiSearch, FiCpu, FiActivity, FiZap,
+  FiTrash2, FiSearch, FiCpu, FiActivity, FiZap, FiRadio,
 } from 'react-icons/fi';
-import { antivirusAPI } from '../services/api';
+import { antivirusAPI, realtimeAPI } from '../services/api';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 export default function AntivirusPage() {
   const [status, setStatus] = useState(null);
@@ -22,9 +23,40 @@ export default function AntivirusPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [folderPath, setFolderPath] = useState('');
   const [monitoredPaths, setMonitoredPaths] = useState([]);
+  const [liveScanResults, setLiveScanResults] = useState([]);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   const refreshInterval = useRef(null);
+
+  const handleWsMessage = useCallback((msg) => {
+    if (msg.type === 'scan_result') {
+      const result = msg.data;
+      setLiveScanResults((prev) => [result, ...prev].slice(0, 50));
+      setScanHistory((prev) => [result, ...prev].slice(0, 200));
+      setStats((prev) => {
+        if (!prev) return prev;
+        const newStats = { ...prev, total_scans: (prev.total_scans || 0) + 1 };
+        if (result.classification === 'safe') newStats.safe = (prev.safe || 0) + 1;
+        else if (result.classification === 'suspicious') newStats.suspicious = (prev.suspicious || 0) + 1;
+        else if (result.classification === 'malicious') newStats.malicious = (prev.malicious || 0) + 1;
+        return newStats;
+      });
+      if (result.classification === 'malicious') {
+        toast.error(`MALICIOUS: "${result.filename}" (Score: ${result.risk_score})`);
+      } else if (result.classification === 'suspicious') {
+        toast.warning(`Suspicious: "${result.filename}" (Score: ${result.risk_score})`);
+      }
+    } else if (msg.type === 'notification') {
+      setNotifications((prev) => [msg.data, ...prev].slice(0, 100));
+      if (msg.data.type === 'threat') {
+        toast.error(msg.data.message);
+      }
+    } else if (msg.type === 'monitoring_event') {
+      toast.info(msg.data.action === 'auto_scan_started' ? 'Auto-scan started' : 'Auto-scan stopped');
+    }
+  }, []);
+
+  const { connected } = useWebSocket(handleWsMessage);
 
   const fetchData = useCallback(async () => {
     try {
@@ -51,7 +83,7 @@ export default function AntivirusPage() {
 
   useEffect(() => {
     fetchData();
-    refreshInterval.current = setInterval(fetchData, 5000);
+    refreshInterval.current = setInterval(fetchData, 30000);
     return () => clearInterval(refreshInterval.current);
   }, [fetchData]);
 
@@ -100,6 +132,35 @@ export default function AntivirusPage() {
       }
     } catch (err) {
       toast.error('Failed to toggle auto-quarantine');
+    }
+  };
+
+  const handleStartAutoScan = async () => {
+    try {
+      await realtimeAPI.startAutoScan();
+      setAutoScanEnabled(true);
+      toast.success('Auto-scan started — files will be scanned in real-time');
+    } catch (err) {
+      if (!err.response) {
+        toast.error('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        const msg = err.response?.data?.detail || err.response?.data?.message || 'Failed to start auto-scan';
+        toast.error(msg);
+      }
+    }
+  };
+
+  const handleStopAutoScan = async () => {
+    try {
+      await realtimeAPI.stopAutoScan();
+      toast.success('Auto-scan stopped');
+    } catch (err) {
+      if (!err.response) {
+        toast.error('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        const msg = err.response?.data?.detail || err.response?.data?.message || 'Failed to stop auto-scan';
+        toast.error(msg);
+      }
     }
   };
 
@@ -246,11 +307,36 @@ export default function AntivirusPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
-          <FiShield className="text-cyan-400" /> Antivirus Protection
-        </h1>
-        <p className="text-dark-400 text-sm mt-1">Real-time file scanning, auto-quarantine, and threat protection</p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-2">
+            <FiShield className="text-cyan-400" /> Antivirus Protection
+            <span className={`ml-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+              connected ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+              {connected ? 'LIVE' : 'OFFLINE'}
+            </span>
+          </h1>
+          <p className="text-dark-400 text-sm mt-1">Real-time file scanning, auto-quarantine, and threat protection</p>
+        </div>
+        <div className="flex gap-2">
+          {autoScanEnabled ? (
+            <button
+              onClick={handleStopAutoScan}
+              className="px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiSquare className="w-4 h-4" /> Stop Auto-Scan
+            </button>
+          ) : (
+            <button
+              onClick={handleStartAutoScan}
+              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiPlay className="w-4 h-4" /> Start Auto-Scan
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Protection Status Banner */}
@@ -490,6 +576,43 @@ export default function AntivirusPage() {
               </div>
             </div>
           </div>
+
+          {liveScanResults.length > 0 && (
+            <div className="bg-dark-900 border border-dark-700 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-dark-700 flex items-center gap-2">
+                <FiRadio className="w-4 h-4 text-cyan-400 animate-pulse" />
+                <h3 className="text-sm font-semibold text-dark-100">Live Scan Feed</h3>
+                <span className="ml-auto text-xs text-dark-400">{liveScanResults.length} recent</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {liveScanResults.slice(0, 10).map((result, idx) => (
+                  <div key={idx} className="px-5 py-3 border-b border-dark-700/50 hover:bg-dark-950 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {result.classification === 'safe' ? (
+                          <FiCheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                        ) : result.classification === 'suspicious' ? (
+                          <FiAlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+                        ) : (
+                          <FiXOctagon className="w-4 h-4 text-red-400 shrink-0" />
+                        )}
+                        <span className="text-sm text-dark-100 truncate">{result.filename}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`text-xs font-mono font-bold ${getRiskColor(result.risk_score)}`}>
+                          {result.risk_score}
+                        </span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-medium border ${getClassBadge(result.classification)}`}>
+                          {result.classification?.toUpperCase()}
+                        </span>
+                        {result.quarantined && <FiLock className="w-3.5 h-3.5 text-red-400" />}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

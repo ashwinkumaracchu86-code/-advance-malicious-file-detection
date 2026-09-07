@@ -104,4 +104,10 @@ export const folderMonitorAPI = {
   getScanHistory: () => api.get('/antivirus/scan-history'),
 };
 
+export const realtimeAPI = {
+  startAutoScan: () => api.post('/realtime/auto-scan/start'),
+  stopAutoScan: () => api.post('/realtime/auto-scan/stop'),
+  getStatus: () => api.get('/realtime/status'),
+};
+
 export default api;

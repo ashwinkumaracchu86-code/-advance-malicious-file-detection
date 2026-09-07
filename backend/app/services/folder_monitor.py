@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import time
+import asyncio
 import threading
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -33,7 +34,7 @@ _auto_quarantine = True
 
 
 def _add_monitor_notification(notification: dict):
-    """Add a notification to the monitor notification queue."""
+    """Add a notification to the monitor notification queue and broadcast via WebSocket."""
     with _monitor_lock:
         notification["id"] = len(_monitor_notifications) + 1
         notification["timestamp"] = datetime.now(timezone.utc).isoformat()
@@ -41,6 +42,15 @@ def _add_monitor_notification(notification: dict):
         _monitor_notifications.insert(0, notification)
         if len(_monitor_notifications) > 100:
             _monitor_notifications.pop()
+    try:
+        from .ws_manager import manager
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(manager.broadcast_notification(notification))
+        else:
+            loop.run_until_complete(manager.broadcast_notification(notification))
+    except Exception:
+        pass
 
 
 class MaliciousFileHandler(FileSystemEventHandler):
@@ -147,6 +157,16 @@ class MaliciousFileHandler(FileSystemEventHandler):
                 _monitor_scan_results.insert(0, scan_result)
                 if len(_monitor_scan_results) > 200:
                     _monitor_scan_results.pop()
+
+            try:
+                from .ws_manager import manager
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.ensure_future(manager.broadcast_scan_result(scan_result))
+                else:
+                    loop.run_until_complete(manager.broadcast_scan_result(scan_result))
+            except Exception:
+                pass
 
             if classification in ("malicious", "suspicious"):
                 create_alert(analysis, db)

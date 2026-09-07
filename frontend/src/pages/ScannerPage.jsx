@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FiUploadCloud, FiFile, FiX, FiCopy, FiCheck, FiExternalLink,
-  FiAlertTriangle, FiShield, FiHash, FiCpu, FiLock, FiSearch
+  FiAlertTriangle, FiShield, FiHash, FiCpu, FiLock, FiSearch, FiPlay, FiSquare
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { filesAPI, scansAPI } from '../services/api';
+import { filesAPI, scansAPI, antivirusAPI, realtimeAPI } from '../services/api';
 
 export default function ScannerPage() {
   const [files, setFiles] = useState([]);
@@ -14,7 +14,34 @@ export default function ScannerPage() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [autoScanEnabled, setAutoScanEnabled] = useState(true);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    antivirusAPI.getStatus().then((res) => {
+      setAutoScanEnabled(res.data.auto_scan_enabled);
+    }).catch(() => {});
+  }, []);
+
+  const handleStopAutoScan = async () => {
+    try {
+      await realtimeAPI.stopAutoScan();
+      setAutoScanEnabled(false);
+      toast.success('Auto-scan stopped');
+    } catch (err) {
+      toast.error('Failed to stop auto-scan');
+    }
+  };
+
+  const handleStartAutoScan = async () => {
+    try {
+      await realtimeAPI.startAutoScan();
+      setAutoScanEnabled(true);
+      toast.success('Auto-scan started');
+    } catch (err) {
+      toast.error('Failed to start auto-scan');
+    }
+  };
 
   const handleFiles = (fileList) => {
     const newFiles = Array.from(fileList);
@@ -147,9 +174,28 @@ export default function ScannerPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-dark-100">File Scanner</h1>
-        <p className="text-dark-400 text-sm mt-1">Upload files to analyze for malware and threats</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-dark-100">File Scanner</h1>
+          <p className="text-dark-400 text-sm mt-1">Upload files to analyze for malware and threats</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {autoScanEnabled ? (
+            <button
+              onClick={handleStopAutoScan}
+              className="px-4 py-2 bg-red-600/80 hover:bg-red-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiSquare className="w-4 h-4" /> Stop Auto-Scan
+            </button>
+          ) : (
+            <button
+              onClick={handleStartAutoScan}
+              className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+            >
+              <FiPlay className="w-4 h-4" /> Start Auto-Scan
+            </button>
+          )}
+        </div>
       </div>
 
       <div

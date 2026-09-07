@@ -2,6 +2,7 @@ import os
 import json
 import time
 import uuid
+import asyncio
 import threading
 import logging
 from typing import List, Optional
@@ -16,6 +17,7 @@ from ..security.auth import get_current_user
 from ..scanner.file_analyzer import analyze_file
 from ..scanner.hash_calculator import calculate_hashes
 from ..scanner.mime_detector import detect_mime_type
+from ..scanner.clamav_scanner import get_clamav_status
 from ..services.virustotal import query_hash
 from ..services.alert_service import create_alert
 from ..services import quarantine_service
@@ -37,7 +39,7 @@ _scan_lock = threading.Lock()
 
 
 def _add_notification(notification: dict):
-    """Add a notification to the queue."""
+    """Add a notification to the queue and broadcast via WebSocket."""
     global _notification_queue
     notification["id"] = len(_notification_queue) + 1
     notification["timestamp"] = datetime.now(timezone.utc).isoformat()
@@ -45,6 +47,15 @@ def _add_notification(notification: dict):
     _notification_queue.insert(0, notification)
     if len(_notification_queue) > 100:
         _notification_queue = _notification_queue[:100]
+    try:
+        from ..services.ws_manager import manager
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.ensure_future(manager.broadcast_notification(notification))
+        else:
+            loop.run_until_complete(manager.broadcast_notification(notification))
+    except Exception:
+        pass
 
 
 def _get_file_extension(filename: str) -> str:
@@ -129,6 +140,8 @@ def perform_auto_scan(file_path: str, filename: str, db: Session, user_id: Optio
             "entropy": analysis.get("entropy", 0),
             "yara_match_count": analysis.get("yara_match_count", 0),
             "detection_reasons": analysis.get("detection_reasons", []),
+            "clamav_result": analysis.get("clamav_scan_result", "unknown"),
+            "clamav_virus_name": analysis.get("clamav_virus_name"),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -206,6 +219,16 @@ def perform_auto_scan(file_path: str, filename: str, db: Session, user_id: Optio
             _scan_history.insert(0, scan_result)
             if len(_scan_history) > 200:
                 _scan_history.pop()
+
+        try:
+            from ..services.ws_manager import manager
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.ensure_future(manager.broadcast_scan_result(scan_result))
+            else:
+                loop.run_until_complete(manager.broadcast_scan_result(scan_result))
+        except Exception:
+            pass
 
         return scan_result
 
@@ -470,3 +493,9 @@ def get_antivirus_stats(db: Session = Depends(get_db)):
         "db_threats": db_threats,
         "protection_status": "active" if _protection_enabled else "inactive",
     }
+
+
+@router.get("/clamav/status")
+def clamav_status():
+    """Get ClamAV antivirus engine status and version info."""
+    return get_clamav_status()

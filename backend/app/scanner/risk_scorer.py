@@ -37,6 +37,8 @@ def calculate_risk_score(
     file_size: int,
     vt_positives: int = 0,
     vt_total: int = 0,
+    clamav_is_infected: bool = False,
+    clamav_scan_result: str = "unknown",
 ) -> Dict[str, any]:
     """Calculate a risk score from 0 to 100 based on multiple factors.
 
@@ -48,6 +50,7 @@ def calculate_risk_score(
     - MIME mismatch (0-10 points): Extension does not match MIME type.
     - File size anomalies (0-5 points): Very small or very large files.
     - VirusTotal (0-5 points): External detection results.
+    - ClamAV (0-15 points): Antivirus engine detection.
     """
     score = 0.0
     reasons = []
@@ -126,6 +129,15 @@ def calculate_risk_score(
             score += 1
             reasons.append(f"Low VirusTotal detection ({vt_positives}/{vt_total})")
 
+    # 8. ClamAV results (0-15 points)
+    if clamav_is_infected:
+        score += 15
+        reasons.append("ClamAV detected malware in file")
+    elif clamav_scan_result == "clean":
+        pass  # No additional points for clean scan
+    elif clamav_scan_result == "error":
+        reasons.append("ClamAV scan could not complete")
+
     score = min(100.0, max(0.0, score))
 
     # Classification
@@ -150,5 +162,6 @@ def calculate_risk_score(
             "mismatch_score": 10 if not extension_matches_mime else 0,
             "size_score": 5 if file_size == 0 else 0,
             "vt_score": 5 if vt_total > 0 and vt_positives / vt_total >= 0.5 else 0,
+            "clamav_score": 15 if clamav_is_infected else 0,
         },
     }
