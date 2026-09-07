@@ -54,7 +54,7 @@ function AppRoutes() {
         <Route path="usb-scanner" element={<USBScannerPage />} />
         <Route path="folder-monitor" element={<FolderMonitorPage />} />
         <Route path="reports" element={<ReportsPage />} />
-        <Route path="logs" element={<SecurityLogsPage />} />
+        <Route path="security-logs" element={<SecurityLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="system-health" element={<SystemHealthPage />} />

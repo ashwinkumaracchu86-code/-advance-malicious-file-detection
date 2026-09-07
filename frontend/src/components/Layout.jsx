@@ -7,13 +7,18 @@ import './GalaxyBackground/galaxy.css';
 
 const pageTitles = {
   '/dashboard': 'Security Dashboard',
+  '/antivirus': 'Antivirus Protection',
   '/scanner': 'File Scanner',
   '/history': 'Scan History',
   '/quarantine': 'Quarantine',
   '/usb-scanner': 'USB Scanner',
   '/folder-monitor': 'Folder Monitor',
+  '/scheduled-scans': 'Scheduled Scans',
+  '/yara-rules': 'YARA Rules',
   '/reports': 'Reports',
-  '/logs': 'Security Logs',
+  '/export': 'Export Data',
+  '/system-health': 'System Health',
+  '/security-logs': 'Security Logs',
   '/settings': 'Settings',
   '/profile': 'Profile',
 };

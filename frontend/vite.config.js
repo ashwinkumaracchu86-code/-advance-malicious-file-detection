@@ -46,6 +46,26 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
       },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/scheduler': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/yara-rules': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/webhooks': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      '/export': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
       '/ws': {
         target: 'ws://localhost:8000',
         ws: true,
