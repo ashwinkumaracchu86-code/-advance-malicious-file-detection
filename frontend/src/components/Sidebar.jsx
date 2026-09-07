@@ -5,6 +5,7 @@ import {
   FiGrid, FiUpload, FiClock, FiShield, FiCpu, FiFolder, FiFileText,
   FiActivity, FiSettings, FiChevronLeft, FiChevronRight, FiLogOut,
   FiUser, FiX, FiShield as FiShieldIcon, FiShieldOff,
+  FiMonitor, FiCalendar, FiCode, FiDownload
 } from 'react-icons/fi';
 
 const NAV_ITEMS = [
@@ -15,7 +16,11 @@ const NAV_ITEMS = [
   { path: '/quarantine', label: 'Quarantine', icon: FiShield },
   { path: '/usb-scanner', label: 'USB Scanner', icon: FiCpu },
   { path: '/folder-monitor', label: 'Folder Monitor', icon: FiFolder },
+  { path: '/scheduled-scans', label: 'Scheduled Scans', icon: FiCalendar },
+  { path: '/yara-rules', label: 'YARA Rules', icon: FiCode },
   { path: '/reports', label: 'Reports', icon: FiFileText },
+  { path: '/export', label: 'Export Data', icon: FiDownload },
+  { path: '/system-health', label: 'System Health', icon: FiMonitor },
   { path: '/security-logs', label: 'Security Logs', icon: FiActivity },
   { path: '/settings', label: 'Settings', icon: FiSettings },
 ];

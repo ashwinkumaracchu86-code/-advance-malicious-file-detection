@@ -110,4 +110,24 @@ export const realtimeAPI = {
   getStatus: () => api.get('/realtime/status'),
 };
 
+export const featuresAPI = {
+  getSystemHealth: () => api.get('/health/system'),
+  getWebhookStatus: () => api.get('/webhooks/status'),
+  testWebhooks: () => api.post('/webhooks/test'),
+  getScheduledScans: () => api.get('/scheduler/jobs'),
+  addScheduledScan: (params) => api.post('/scheduler/add', null, { params }),
+  removeScheduledScan: (jobId) => api.delete(`/scheduler/${jobId}`),
+  toggleScheduledScan: (jobId, enabled) => api.post(`/scheduler/${jobId}/toggle`, null, { params: { enabled } }),
+  getYaraRules: () => api.get('/yara-rules/list'),
+  uploadYaraRule: (formData) => api.post('/yara-rules/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteYaraRule: (filename) => api.delete(`/yara-rules/${filename}`),
+  reloadYaraRules: () => api.post('/yara-rules/reload'),
+  getYaraRuleContent: (filename) => api.get(`/yara-rules/${filename}`),
+  exportScansCSV: () => api.get('/export/scans/csv', { responseType: 'blob' }),
+  exportScansJSON: () => api.get('/export/scans/json', { responseType: 'blob' }),
+  exportThreatsCSV: () => api.get('/export/threats/csv', { responseType: 'blob' }),
+};
+
 export default api;

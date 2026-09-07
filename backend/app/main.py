@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from .database import engine, Base, SessionLocal
 from .models.models import User
 from .security.auth import get_password_hash
-from .routes import auth, files, scans, dashboard, quarantine, logs, reports, antivirus, realtime
+from .routes import auth, files, scans, dashboard, quarantine, logs, reports, antivirus, realtime, features
 from .scanner.yara_scanner import get_yara_scanner
 
 logging.basicConfig(level=logging.INFO)
@@ -95,6 +95,7 @@ app.include_router(logs.router)
 app.include_router(reports.router)
 app.include_router(antivirus.router)
 app.include_router(realtime.router)
+app.include_router(features.router)
 
 
 @app.get("/")

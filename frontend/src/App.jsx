@@ -16,6 +16,10 @@ import ReportsPage from './pages/ReportsPage';
 import SecurityLogsPage from './pages/SecurityLogsPage';
 import SettingsPage from './pages/SettingsPage';
 import ProfilePage from './pages/ProfilePage';
+import SystemHealthPage from './pages/SystemHealthPage';
+import ScheduledScansPage from './pages/ScheduledScansPage';
+import YaraRulesPage from './pages/YaraRulesPage';
+import ExportPage from './pages/ExportPage';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -53,6 +57,10 @@ function AppRoutes() {
         <Route path="logs" element={<SecurityLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="system-health" element={<SystemHealthPage />} />
+        <Route path="scheduled-scans" element={<ScheduledScansPage />} />
+        <Route path="yara-rules" element={<YaraRulesPage />} />
+        <Route path="export" element={<ExportPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
