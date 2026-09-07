@@ -115,6 +115,7 @@ export const featuresAPI = {
   getWebhookStatus: () => api.get('/webhooks/status'),
   testWebhooks: () => api.post('/webhooks/test'),
   getScheduledScans: () => api.get('/scheduler/jobs'),
+  getCommonPaths: () => api.get('/scheduler/common-paths'),
   addScheduledScan: (params) => api.post('/scheduler/add', null, { params }),
   removeScheduledScan: (jobId) => api.delete(`/scheduler/${jobId}`),
   toggleScheduledScan: (jobId, enabled) => api.post(`/scheduler/${jobId}/toggle`, null, { params: { enabled } }),

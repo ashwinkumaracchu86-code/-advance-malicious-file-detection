@@ -40,8 +40,8 @@ def test_webhooks(current_user: User = Depends(get_current_user)):
 
 
 @router.get("/scheduler/jobs")
-def list_scheduled_scans(current_user: User = Depends(get_current_user)):
-    """List all scheduled scan jobs."""
+def get_scheduled_scans(current_user: User = Depends(get_current_user)):
+    """Get all scheduled scan jobs."""
     jobs = scheduler_service.get_scheduled_scans()
     serializable_jobs = []
     for job in jobs:
@@ -51,6 +51,23 @@ def list_scheduled_scans(current_user: User = Depends(get_current_user)):
                 sj[key] = sj[key].isoformat()
         serializable_jobs.append(sj)
     return {"jobs": serializable_jobs}
+
+
+@router.get("/scheduler/common-paths")
+def get_common_paths(current_user: User = Depends(get_current_user)):
+    """Get common scan folder paths with resolved usernames."""
+    import os
+    home = os.path.expanduser("~")
+    paths = []
+    for name, sub in [("Downloads", "Downloads"), ("Desktop", "Desktop"), ("Documents", "Documents")]:
+        p = os.path.join(home, sub)
+        if os.path.isdir(p):
+            paths.append({"label": name, "path": p, "exists": True})
+        else:
+            paths.append({"label": name, "path": p, "exists": False})
+    for name, p in [("Temp", "C:\\Windows\\Temp"), ("Program Files", "C:\\Program Files")]:
+        paths.append({"label": name, "path": p, "exists": os.path.isdir(p)})
+    return {"paths": paths}
 
 
 @router.post("/scheduler/add")

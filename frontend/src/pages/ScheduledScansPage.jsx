@@ -5,14 +5,6 @@ import {
 } from 'react-icons/fi';
 import { featuresAPI } from '../services/api';
 
-const PRESET_PATHS = [
-  { label: 'Downloads', path: 'C:\\Users\\%USERNAME%\\Downloads' },
-  { label: 'Desktop', path: 'C:\\Users\\%USERNAME%\\Desktop' },
-  { label: 'Documents', path: 'C:\\Users\\%USERNAME%\\Documents' },
-  { label: 'Temp', path: 'C:\\Windows\\Temp' },
-  { label: 'Program Files', path: 'C:\\Program Files' },
-];
-
 export default function ScheduledScansPage() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +12,8 @@ export default function ScheduledScansPage() {
   const [interval, setInterval_] = useState(60);
   const [jobName, setJobName] = useState('');
   const [showPresets, setShowPresets] = useState(false);
-  const folderInputRef = useRef(null);
+  const [presetPaths, setPresetPaths] = useState([]);
+  const dropdownRef = useRef(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -33,11 +26,31 @@ export default function ScheduledScansPage() {
     }
   }, []);
 
+  const fetchPresetPaths = useCallback(async () => {
+    try {
+      const res = await featuresAPI.getCommonPaths();
+      setPresetPaths(res.data.paths || []);
+    } catch {
+      setPresetPaths([]);
+    }
+  }, []);
+
   useEffect(() => {
     fetchJobs();
+    fetchPresetPaths();
     const interval = setInterval(fetchJobs, 15000);
     return () => clearInterval(interval);
-  }, [fetchJobs]);
+  }, [fetchJobs, fetchPresetPaths]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowPresets(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleAdd = async () => {
     if (!folderPath.trim()) {
@@ -45,17 +58,21 @@ export default function ScheduledScansPage() {
       return;
     }
     try {
-      await featuresAPI.addScheduledScan({
+      const res = await featuresAPI.addScheduledScan({
         folder_path: folderPath,
         interval_minutes: interval,
         name: jobName || `Scan: ${folderPath.split('\\').pop() || folderPath.split('/').pop()}`,
       });
+      if (res.data.error) {
+        toast.error(res.data.error);
+        return;
+      }
       toast.success('Scheduled scan added');
       setFolderPath('');
       setJobName('');
       fetchJobs();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to add scheduled scan');
+      toast.error(err.response?.data?.detail || err.response?.data?.error || 'Failed to add scheduled scan');
     }
   };
 
@@ -101,7 +118,7 @@ export default function ScheduledScansPage() {
           <FiPlus className="text-cyan-400" /> Add Scheduled Scan
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <input
               type="text"
               value={folderPath}
@@ -116,20 +133,24 @@ export default function ScheduledScansPage() {
             >
               <FiChevronDown className={`w-4 h-4 text-dark-400 transition-transform ${showPresets ? 'rotate-180' : ''}`} />
             </button>
-            {showPresets && (
+            {showPresets && presetPaths.length > 0 && (
               <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-dark-900 border border-dark-700 rounded-lg shadow-lg overflow-hidden">
-                {PRESET_PATHS.map((preset) => (
+                {presetPaths.map((preset) => (
                   <button
                     key={preset.label}
                     onClick={() => {
                       setFolderPath(preset.path);
                       setShowPresets(false);
+                      if (!preset.exists) {
+                        toast.error(`Folder not found: ${preset.path}`);
+                      }
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-dark-200 hover:bg-dark-800 transition-colors flex items-center gap-2"
+                    className={`w-full px-4 py-2.5 text-left text-sm hover:bg-dark-800 transition-colors flex items-center gap-2 ${preset.exists ? 'text-dark-200' : 'text-dark-500'}`}
                   >
                     <FiFolder className="w-4 h-4 text-cyan-400" />
                     <span>{preset.label}</span>
                     <span className="text-xs text-dark-500 ml-auto font-mono">{preset.path}</span>
+                    {!preset.exists && <span className="text-xs text-red-400 ml-1">missing</span>}
                   </button>
                 ))}
               </div>
